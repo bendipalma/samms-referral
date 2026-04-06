@@ -551,7 +551,8 @@ const initialState: FormState = {
 
 export default function ReferralForm() {
   const [form, setForm] = useState<FormState>(initialState);
-  const [files, setFiles] = useState<File[]>([]);
+  const [fileNames, setFileNames] = useState<string[]>([]);
+  const filesRef = useRef<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -571,11 +572,15 @@ export default function ReferralForm() {
     if (!e.target.files) return;
     const newFiles = Array.from(e.target.files);
     const valid = newFiles.filter((f) => f.size <= 10 * 1024 * 1024);
-    setFiles((prev) => [...prev, ...valid].slice(0, 5));
+    const updated = [...filesRef.current, ...valid].slice(0, 5);
+    filesRef.current = updated;
+    setFileNames(updated.map((f) => `${f.name}|${f.size}`));
   };
 
   const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+    const updated = filesRef.current.filter((_, i) => i !== index);
+    filesRef.current = updated;
+    setFileNames(updated.map((f) => `${f.name}|${f.size}`));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -587,7 +592,7 @@ export default function ReferralForm() {
     try {
       const fd = new FormData();
       fd.append("data", JSON.stringify(form));
-      files.forEach((file) => fd.append("files", file));
+      filesRef.current.forEach((file) => fd.append("files", file));
 
       const res = await fetch("/api/referral", { method: "POST", body: fd });
       const json = await res.json();
@@ -1211,10 +1216,10 @@ export default function ReferralForm() {
                   disabled={formDisabled}
                 />
               </div>
-              {files.length > 0 && (
+              {filesRef.current.length > 0 && (
                 <div className="mt-3 space-y-2">
-                  {files.map((file, i) => (
-                    <div key={i} className="flex items-center justify-between bg-surface-muted rounded-lg px-4 py-2.5">
+                  {filesRef.current.map((file, i) => (
+                    <div key={fileNames[i]} className="flex items-center justify-between bg-surface-muted rounded-lg px-4 py-2.5">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-sm text-text-primary truncate">{file.name}</span>
                         <span className="text-xs text-text-light flex-shrink-0">
@@ -1252,10 +1257,10 @@ export default function ReferralForm() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Submitting Referral...
+                  {filesRef.current.length > 0 ? "Uploading files & submitting..." : "Submitting Referral..."}
                 </span>
               ) : (
-                "Submit Referral"
+                filesRef.current.length > 0 ? `Submit Referral (${filesRef.current.length} file${filesRef.current.length > 1 ? "s" : ""} attached)` : "Submit Referral"
               )}
             </button>
           </div>
