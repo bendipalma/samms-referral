@@ -57,8 +57,9 @@ export async function POST(request: NextRequest) {
       // Collect files
       const allFiles = fd.getAll("files");
       for (const value of allFiles) {
-        if (value instanceof File) {
-          files.push(value);
+        if (typeof value === "object" && value !== null && "arrayBuffer" in value && "name" in value) {
+          const f = value as File;
+          if (f.size > 0) files.push(f);
         }
       }
     } else {
@@ -107,7 +108,9 @@ export async function POST(request: NextRequest) {
             contentType: file.type,
             upsert: false,
           });
-        if (!uploadError) {
+        if (uploadError) {
+          console.error("File upload error:", uploadError.message, storagePath);
+        } else {
           uploadedFiles.push(storagePath);
         }
       }
