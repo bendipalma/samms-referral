@@ -56,12 +56,14 @@ export async function POST(request: NextRequest) {
 
       // Collect files
       const allFiles = fd.getAll("files");
+      console.log("Files received:", allFiles.length, allFiles.map((f) => typeof f === "object" && f !== null && "name" in f ? `${(f as File).name} (${(f as File).size}b, ${(f as File).type})` : typeof f));
       for (const value of allFiles) {
         if (typeof value === "object" && value !== null && "arrayBuffer" in value && "name" in value) {
           const f = value as File;
           if (f.size > 0) files.push(f);
         }
       }
+      console.log("Files accepted:", files.length);
     } else {
       formData = await request.json();
     }
