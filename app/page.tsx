@@ -592,7 +592,12 @@ export default function ReferralForm() {
     try {
       const fd = new FormData();
       fd.append("data", JSON.stringify(form));
-      filesRef.current.forEach((file) => fd.append("files", file));
+      const currentFiles = filesRef.current;
+      console.log("Files to upload:", currentFiles.length, currentFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
+      currentFiles.forEach((file) => {
+        console.log("Appending file:", file.name, file.size);
+        fd.append("files", file, file.name);
+      });
 
       const res = await fetch("/api/referral", { method: "POST", body: fd });
       const json = await res.json();
