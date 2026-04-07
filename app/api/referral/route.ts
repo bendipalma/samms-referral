@@ -195,17 +195,22 @@ export async function POST(request: NextRequest) {
     const webhookKey = process.env.WEBHOOK_API_KEY;
     if (webhookUrl) {
       try {
+        const webhookFd = new FormData();
+        webhookFd.append("data", JSON.stringify({
+          referenceNumber,
+          ...data,
+          uploadedFiles,
+        }));
+        // Attach actual files
+        for (const file of files) {
+          webhookFd.append("files", file, file.name);
+        }
         await fetch(webhookUrl, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             "x-api-key": webhookKey || "",
           },
-          body: JSON.stringify({
-            referenceNumber,
-            ...data,
-            uploadedFiles,
-          }),
+          body: webhookFd,
         });
       } catch (webhookErr) {
         // Don't fail the submission if webhook fails
