@@ -1221,7 +1221,7 @@ export default function ReferralForm() {
                   multiple
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
                   onChange={handleFileChange}
-                  className="hidden"
+                  className="sr-only"
                   disabled={formDisabled}
                 />
               </div>
