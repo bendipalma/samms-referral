@@ -551,8 +551,7 @@ const initialState: FormState = {
 
 export default function ReferralForm() {
   const [form, setForm] = useState<FormState>(initialState);
-  const [fileNames, setFileNames] = useState<string[]>([]);
-  const filesRef = useRef<File[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -572,15 +571,11 @@ export default function ReferralForm() {
     if (!e.target.files) return;
     const newFiles = Array.from(e.target.files);
     const valid = newFiles.filter((f) => f.size <= 10 * 1024 * 1024);
-    const updated = [...filesRef.current, ...valid].slice(0, 5);
-    filesRef.current = updated;
-    setFileNames(updated.map((f) => `${f.name}|${f.size}`));
+    setFiles((prev) => [...prev, ...valid].slice(0, 5));
   };
 
   const removeFile = (index: number) => {
-    const updated = filesRef.current.filter((_, i) => i !== index);
-    filesRef.current = updated;
-    setFileNames(updated.map((f) => `${f.name}|${f.size}`));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -592,10 +587,10 @@ export default function ReferralForm() {
     try {
       const fd = new FormData();
       fd.append("data", JSON.stringify(form));
-      const currentFiles = filesRef.current;
-      console.log("Files to upload:", currentFiles.length, currentFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
-      currentFiles.forEach((file) => {
-        console.log("Appending file:", file.name, file.size);
+      // Grab files directly from the input element as a fallback
+      const inputFiles = fileInputRef.current?.files;
+      const filesToUpload = files.length > 0 ? files : (inputFiles ? Array.from(inputFiles) : []);
+      filesToUpload.forEach((file) => {
         fd.append("files", file, file.name);
       });
 
@@ -1221,10 +1216,10 @@ export default function ReferralForm() {
                   disabled={formDisabled}
                 />
               </div>
-              {filesRef.current.length > 0 && (
+              {files.length > 0 && (
                 <div className="mt-3 space-y-2">
-                  {filesRef.current.map((file, i) => (
-                    <div key={fileNames[i]} className="flex items-center justify-between bg-surface-muted rounded-lg px-4 py-2.5">
+                  {files.map((file, i) => (
+                    <div key={`${file.name}-${file.size}`} className="flex items-center justify-between bg-surface-muted rounded-lg px-4 py-2.5">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-sm text-text-primary truncate">{file.name}</span>
                         <span className="text-xs text-text-light flex-shrink-0">
@@ -1262,10 +1257,10 @@ export default function ReferralForm() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  {filesRef.current.length > 0 ? "Uploading files & submitting..." : "Submitting Referral..."}
+                  {files.length > 0 ? "Uploading files & submitting..." : "Submitting Referral..."}
                 </span>
               ) : (
-                filesRef.current.length > 0 ? `Submit Referral (${filesRef.current.length} file${filesRef.current.length > 1 ? "s" : ""} attached)` : "Submit Referral"
+                files.length > 0 ? `Submit Referral (${files.length} file${files.length > 1 ? "s" : ""} attached)` : "Submit Referral"
               )}
             </button>
           </div>
