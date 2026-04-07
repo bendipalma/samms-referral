@@ -613,7 +613,7 @@ export default function ReferralForm() {
 
       const refNum = json.referenceNumber;
 
-      // Step 2: Upload files directly to Supabase via signed URLs
+      // Step 2: Upload files one at a time via dedicated endpoint
       const filesToUpload: File[] = [];
       const inputEl = fileInputRef.current;
       if (inputEl?.files) {
@@ -625,40 +625,16 @@ export default function ReferralForm() {
         filesToUpload.push(...files);
       }
 
-      const uploadedPaths: string[] = [];
       for (const file of filesToUpload.slice(0, 5)) {
         if (file.size > 10 * 1024 * 1024) continue;
         try {
-          // Get signed upload URL from our API
-          const urlRes = await fetch("/api/upload-url", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ referenceNumber: refNum, fileName: file.name, contentType: file.type }),
-          });
-          const urlJson = await urlRes.json();
-          if (!urlRes.ok) continue;
-
-          // Upload file directly to Supabase Storage
-          const uploadRes = await fetch(urlJson.signedUrl, {
-            method: "PUT",
-            headers: { "Content-Type": file.type },
-            body: file,
-          });
-          if (uploadRes.ok) {
-            uploadedPaths.push(urlJson.storagePath);
-          }
+          const fileFd = new FormData();
+          fileFd.append("file", file, file.name);
+          fileFd.append("referenceNumber", refNum);
+          await fetch("/api/upload-file", { method: "POST", body: fileFd });
         } catch {
           console.error("File upload failed:", file.name);
         }
-      }
-
-      // Step 3: Update referral record with file paths
-      if (uploadedPaths.length > 0) {
-        await fetch("/api/update-files", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ referenceNumber: refNum, uploadedFiles: uploadedPaths }),
-        });
       }
 
       setReferenceNumber(refNum);
