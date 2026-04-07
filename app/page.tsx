@@ -585,14 +585,22 @@ export default function ReferralForm() {
     setSubmitError("");
 
     try {
-      const fd = new FormData();
-      fd.append("data", JSON.stringify(form));
-      // Grab files directly from the input element as a fallback
-      const inputFiles = fileInputRef.current?.files;
-      const filesToUpload = files.length > 0 ? files : (inputFiles ? Array.from(inputFiles) : []);
-      filesToUpload.forEach((file) => {
-        fd.append("files", file, file.name);
+      // Build FormData from the actual form element to capture file inputs natively
+      const formEl = e.target as HTMLFormElement;
+      const fd = new FormData(formEl);
+      // Remove all native form fields — we send them as JSON instead
+      const keysToRemove: string[] = [];
+      fd.forEach((_, key) => { if (key !== "fileUpload") keysToRemove.push(key); });
+      keysToRemove.forEach((key) => fd.delete(key));
+      // Rename fileUpload entries to "files"
+      const uploadedFiles = fd.getAll("fileUpload");
+      fd.delete("fileUpload");
+      uploadedFiles.forEach((file) => {
+        if (file instanceof File && file.size > 0) {
+          fd.append("files", file, file.name);
+        }
       });
+      fd.append("data", JSON.stringify(form));
 
       const res = await fetch("/api/referral", { method: "POST", body: fd });
       const json = await res.json();
@@ -1208,6 +1216,7 @@ export default function ReferralForm() {
                 <p className="text-xs text-text-light mt-1">PDF, DOC, DOCX, JPG, PNG</p>
                 <input
                   ref={fileInputRef}
+                  name="fileUpload"
                   type="file"
                   multiple
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
