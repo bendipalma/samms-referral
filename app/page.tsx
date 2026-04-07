@@ -585,32 +585,12 @@ export default function ReferralForm() {
     setSubmitError("");
 
     try {
-      const fd = new FormData();
-      fd.append("data", JSON.stringify(form));
-
-      // Get files from the file input element directly
-      const inputEl = fileInputRef.current;
-      if (inputEl?.files) {
-        for (let i = 0; i < inputEl.files.length; i++) {
-          const file = inputEl.files[i];
-          if (file.size > 0) {
-            fd.append("files", file, file.name);
-          }
-        }
-      }
-      // Also try from React state as fallback
-      if (!inputEl?.files?.length && files.length > 0) {
-        files.forEach((file) => {
-          fd.append("files", file, file.name);
-        });
-      }
-
-      // Debug: log what we're sending
-      let fileCount = 0;
-      fd.forEach((val, key) => { if (key === "files") fileCount++; });
-      console.log("Submitting with", fileCount, "files");
-
-      const res = await fetch("/api/referral", { method: "POST", body: fd });
+      // Step 1: Submit form data (no files) as JSON
+      const res = await fetch("/api/referral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
       const json = await res.json();
 
       if (!res.ok) {
@@ -631,7 +611,57 @@ export default function ReferralForm() {
         return;
       }
 
-      setReferenceNumber(json.referenceNumber);
+      const refNum = json.referenceNumber;
+
+      // Step 2: Upload files directly to Supabase via signed URLs
+      const filesToUpload: File[] = [];
+      const inputEl = fileInputRef.current;
+      if (inputEl?.files) {
+        for (let i = 0; i < inputEl.files.length; i++) {
+          if (inputEl.files[i].size > 0) filesToUpload.push(inputEl.files[i]);
+        }
+      }
+      if (filesToUpload.length === 0 && files.length > 0) {
+        filesToUpload.push(...files);
+      }
+
+      const uploadedPaths: string[] = [];
+      for (const file of filesToUpload.slice(0, 5)) {
+        if (file.size > 10 * 1024 * 1024) continue;
+        try {
+          // Get signed upload URL from our API
+          const urlRes = await fetch("/api/upload-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ referenceNumber: refNum, fileName: file.name, contentType: file.type }),
+          });
+          const urlJson = await urlRes.json();
+          if (!urlRes.ok) continue;
+
+          // Upload file directly to Supabase Storage
+          const uploadRes = await fetch(urlJson.signedUrl, {
+            method: "PUT",
+            headers: { "Content-Type": file.type },
+            body: file,
+          });
+          if (uploadRes.ok) {
+            uploadedPaths.push(urlJson.storagePath);
+          }
+        } catch {
+          console.error("File upload failed:", file.name);
+        }
+      }
+
+      // Step 3: Update referral record with file paths
+      if (uploadedPaths.length > 0) {
+        await fetch("/api/update-files", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ referenceNumber: refNum, uploadedFiles: uploadedPaths }),
+        });
+      }
+
+      setReferenceNumber(refNum);
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
