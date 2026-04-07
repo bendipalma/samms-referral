@@ -190,6 +190,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Send to Power Automate webhook
+    const webhookUrl = process.env.POWER_AUTOMATE_WEBHOOK_URL;
+    const webhookKey = process.env.WEBHOOK_API_KEY;
+    if (webhookUrl) {
+      try {
+        await fetch(webhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": webhookKey || "",
+          },
+          body: JSON.stringify({
+            referenceNumber,
+            ...data,
+            uploadedFiles,
+          }),
+        });
+      } catch (webhookErr) {
+        // Don't fail the submission if webhook fails
+        console.error("Power Automate webhook error:", webhookErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       referenceNumber,
