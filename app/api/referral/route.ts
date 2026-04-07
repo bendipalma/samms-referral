@@ -5,7 +5,7 @@ import { referralSchema, sanitiseAll } from "@/lib/validation";
 
 // Simple in-memory rate limiter: 3 submissions per IP per 10 minutes
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 3;
+const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 
 function checkRateLimit(ip: string): boolean {
