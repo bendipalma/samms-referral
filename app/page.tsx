@@ -633,7 +633,7 @@ export default function ReferralForm() {
           fileFd.append("referenceNumber", refNum);
           await fetch("/api/upload-file", { method: "POST", body: fileFd });
         } catch {
-          console.error("File upload failed:", file.name);
+          // File upload failed silently — referral still submitted
         }
       }
 
