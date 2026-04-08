@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@cloudflare/next-on-pages": "^1.13.16",
     "@supabase/supabase-js": "^2.101.1",
     "next": "14.2.35",
     "react": "^18",
@@ -17,7 +16,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^20.17.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "eslint": "^8",

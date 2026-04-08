@@ -87,3 +87,4 @@ vercel
 ```
 
 Set the three environment variables in your Vercel project settings.
+<!-- auto-deploy test -->
