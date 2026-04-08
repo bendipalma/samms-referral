@@ -192,22 +192,29 @@ export async function POST(request: NextRequest) {
     const webhookKey = process.env.WEBHOOK_API_KEY;
     if (webhookUrl) {
       try {
-        const webhookFd = new FormData();
-        webhookFd.append("data", JSON.stringify({
-          referenceNumber,
-          ...data,
-          uploadedFiles,
-        }));
-        // Attach actual files
-        for (const file of files) {
-          webhookFd.append("files", file, file.name);
+        // Generate securely signed URLs for Power Automate to download (valid for 1 hour)
+        const fileUrls: string[] = [];
+        for (const path of uploadedFiles) {
+          const { data: signedData } = await supabase.storage
+            .from("referral-files")
+            .createSignedUrl(path, 60 * 60);
+            
+          if (signedData?.signedUrl) {
+            fileUrls.push(signedData.signedUrl);
+          }
         }
+
         await fetch(webhookUrl, {
           method: "POST",
           headers: {
+            "Content-Type": "application/json",
             "x-api-key": webhookKey || "",
           },
-          body: webhookFd,
+          body: JSON.stringify({
+            referenceNumber,
+            ...data,
+            uploadedFiles: fileUrls,
+          }),
         });
       } catch (webhookErr) {
         // Don't fail the submission if webhook fails

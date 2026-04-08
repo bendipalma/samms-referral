@@ -585,11 +585,29 @@ export default function ReferralForm() {
     setSubmitError("");
 
     try {
-      // Step 1: Submit form data (no files) as JSON
+      const filesToUpload: File[] = [];
+      const inputEl = fileInputRef.current;
+      if (inputEl?.files) {
+        for (let i = 0; i < inputEl.files.length; i++) {
+          if (inputEl.files[i].size > 0) filesToUpload.push(inputEl.files[i]);
+        }
+      }
+      if (filesToUpload.length === 0 && files.length > 0) {
+        filesToUpload.push(...files);
+      }
+
+      const formData = new FormData();
+      formData.append("data", JSON.stringify(form));
+
+      for (const file of filesToUpload.slice(0, 5)) {
+        if (file.size <= 10 * 1024 * 1024) {
+          formData.append("files", file);
+        }
+      }
+
       const res = await fetch("/api/referral", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: formData,
       });
       const json = await res.json();
 
@@ -611,33 +629,7 @@ export default function ReferralForm() {
         return;
       }
 
-      const refNum = json.referenceNumber;
-
-      // Step 2: Upload files one at a time via dedicated endpoint
-      const filesToUpload: File[] = [];
-      const inputEl = fileInputRef.current;
-      if (inputEl?.files) {
-        for (let i = 0; i < inputEl.files.length; i++) {
-          if (inputEl.files[i].size > 0) filesToUpload.push(inputEl.files[i]);
-        }
-      }
-      if (filesToUpload.length === 0 && files.length > 0) {
-        filesToUpload.push(...files);
-      }
-
-      for (const file of filesToUpload.slice(0, 5)) {
-        if (file.size > 10 * 1024 * 1024) continue;
-        try {
-          const fileFd = new FormData();
-          fileFd.append("file", file, file.name);
-          fileFd.append("referenceNumber", refNum);
-          await fetch("/api/upload-file", { method: "POST", body: fileFd });
-        } catch {
-          // File upload failed silently — referral still submitted
-        }
-      }
-
-      setReferenceNumber(refNum);
+      setReferenceNumber(json.referenceNumber);
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
