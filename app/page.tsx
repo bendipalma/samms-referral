@@ -675,7 +675,7 @@ export default function ReferralForm() {
             <h2 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight">
               Clinical Referral Form
             </h2>
-            <p className="text-sm text-text-muted mt-1">Stability Before Capacity - TEST CODE</p>
+            <p className="text-sm text-text-muted mt-1">Stability Before Capacity</p>
           </div>
         </div>
       </header>
